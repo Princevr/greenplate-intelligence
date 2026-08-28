@@ -189,10 +189,10 @@ if page == "Dashboard":
 
     col1, col2, col3, col4 = st.columns(4)
 
-    col1.metric(
-        "Customer Demand",
-        f"{total_demand:,.0f} units"
-    )
+col1.metric(
+    "Customer Demand",
+    f"{total_demand/1000:.1f}K units"
+)
 
     col2.metric(
         "Units Sold",
@@ -205,10 +205,9 @@ if page == "Dashboard":
     )
 
     col4.metric(
-        "Revenue",
-        f"€{total_revenue:,.2f}"
-    )
-
+    "Revenue",
+    f"€{total_revenue/1000:.1f}K"
+)
     col5, col6, col7 = st.columns(3)
 
     col5.metric(
