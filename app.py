@@ -185,29 +185,30 @@ if page == "Dashboard":
     total_revenue = filtered_data["Revenue_EUR"].sum()
     avg_service_level = filtered_data["Service_Level_Pct"].mean()
 
-  st.subheader("Business Performance")
+        st.subheader("Business Performance")
 
-col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns(4)
 
-col1.metric(
-    "Customer Demand",
-    f"{total_demand:,.0f} units"
-)
+    col1.metric(
+        "Customer Demand",
+        f"{total_demand:,.0f} units"
+    )
 
-col2.metric(
-    "Units Sold",
-    f"{total_units_sold:,.0f}"
-)
+    col2.metric(
+        "Units Sold",
+        f"{total_units_sold:,.0f}"
+    )
 
-col3.metric(
-    "Lost Sales",
-    f"{total_lost_sales:,.0f} units"
-)
+    col3.metric(
+        "Lost Sales",
+        f"{total_lost_sales:,.0f} units"
+    )
 
-col4.metric(
-    "Revenue",
-    f"€{total_revenue:,.2f}"
-)
+    col4.metric(
+        "Revenue",
+        f"€{total_revenue:,.2f}"
+    )
+
     col5, col6, col7 = st.columns(3)
 
     col5.metric(
