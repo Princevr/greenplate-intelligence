@@ -40,13 +40,29 @@ st.markdown(
         background-color: #eef7f0;
     }
 
-    [data-testid="stMetric"] {
-        background-color: white;
-        border: 1px solid #e1e8e3;
-        padding: 18px;
-        border-radius: 14px;
-        box-shadow: 0px 2px 8px rgba(0,0,0,0.04);
-    }
+   [data-testid="stMetric"] {
+    background-color: white;
+    border: 1px solid #e1e6e3;
+    padding: 18px 14px;
+    border-radius: 14px;
+    box-shadow: 0px 2px 8px rgba(0,0,0,0.04);
+    min-height: 120px;
+}
+
+[data-testid="stMetricLabel"] {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+[data-testid="stMetricValue"] {
+    font-size: 26px;
+    font-weight: 600;
+}
+
+[data-testid="stMetricValue"] > div {
+    overflow: visible;
+    white-space: nowrap;
+}
 
     .hero {
         background: linear-gradient(
