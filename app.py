@@ -185,7 +185,7 @@ if page == "Dashboard":
     total_revenue = filtered_data["Revenue_EUR"].sum()
     avg_service_level = filtered_data["Service_Level_Pct"].mean()
 
-        st.subheader("Business Performance")
+    st.subheader("Business Performance")
 
     col1, col2, col3, col4 = st.columns(4)
 
