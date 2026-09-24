@@ -470,4 +470,80 @@ elif page == "Autonomous Actions":
         st.dataframe(recent[cols].tail(14), use_container_width=True, hide_index=True)
 
         st.divider()
-        st.info("Prototype note: GreenPlate currently generates controlled decision recommendations only. In a real deployment, approved actions could be transmitted to ERP, inventory or supplier systems through APIs after authorization.")
+        st.subheader("👤 Manager Approval")
+
+        st.caption(
+            "Higher-risk operational changes require human approval. "
+            "This prototype demonstrates the approval workflow only."
+        )
+
+        approval_key = f"approval_status_{selected_store}_{decision}"
+        if approval_key not in st.session_state:
+            st.session_state[approval_key] = "Pending"
+
+        if status == "Manager Approval Required":
+            st.warning(
+                "⚠️ Approval required: GreenPlate will not execute this recommendation "
+                "unless an authorized manager approves it."
+            )
+
+            approve_col, reject_col = st.columns(2)
+
+            if approve_col.button(
+                "✅ Approve Recommendation",
+                key=f"approve_{selected_store}_{decision}",
+                use_container_width=True
+            ):
+                st.session_state[approval_key] = "Approved"
+
+            if reject_col.button(
+                "❌ Reject Recommendation",
+                key=f"reject_{selected_store}_{decision}",
+                use_container_width=True
+            ):
+                st.session_state[approval_key] = "Rejected"
+
+            approval_status = st.session_state[approval_key]
+
+            if approval_status == "Approved":
+                st.success(
+                    "✅ Prototype status: APPROVED by manager. "
+                    "No real supplier order, ERP update, inventory change, or external action has been executed."
+                )
+            elif approval_status == "Rejected":
+                st.error(
+                    "❌ Prototype status: REJECTED by manager. "
+                    "The recommendation would not proceed to execution."
+                )
+            else:
+                st.info(
+                    "⏳ Prototype status: PENDING MANAGER APPROVAL. "
+                    "No operational action can proceed."
+                )
+
+        elif status == "Review Recommended":
+            st.info(
+                "👀 Manager review is recommended, but this prototype does not "
+                "automatically execute any operational change."
+            )
+        else:
+            st.success(
+                "✅ No intervention is currently required, so there is no action awaiting approval."
+            )
+
+        st.subheader("🔄 Controlled Decision Workflow")
+        st.markdown(
+            """
+            **1. Operational Data** → sales, orders, unsold food, weather and calendar information  
+            **2. Analysis** → GreenPlate identifies recent operational patterns  
+            **3. Recommendation** → the system proposes an operational response  
+            **4. Human Control** → higher-risk changes require manager approval  
+            **5. Execution Layer** → only an approved action could be sent to connected business systems in a real deployment
+            """
+        )
+
+        st.info(
+            "🧪 Prototype only: The Approve and Reject buttons demonstrate the governance workflow. "
+            "They do not send orders to suppliers, modify inventory, update an ERP system, "
+            "or communicate with any external system."
+        )
