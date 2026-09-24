@@ -171,37 +171,39 @@ def hero(title, subtitle):
 # =========================================================
 
 if page == "Dashboard":
-    hero("🌱 GreenPlate Intelligence",
-         "Decision Intelligence for Sustainable Food Operations")
+    hero(
+        "🌱 GreenPlate Intelligence",
+        "Decision Intelligence for Sustainable Food Operations"
+    )
 
-   stores = sorted(data["store"].dropna().astype(str).unique())
+    stores = sorted(data["store"].dropna().astype(str).unique())
 
-store_labels = {
-    "store_0": "GreenBite Munich",
-    "store_1": "FreshTable Berlin",
-    "store_2": "UrbanPlate Hamburg",
-    "store_3": "EcoKitchen Frankfurt",
-    "store_4": "FreshFork Cologne",
-    "store_5": "GreenTable Stuttgart",
-    "store_6": "UrbanBite Düsseldorf",
-    "store_7": "EcoPlate Leipzig"
-}
+    store_labels = {
+        "store_0": "GreenBite Munich",
+        "store_1": "FreshTable Berlin",
+        "store_2": "UrbanPlate Hamburg",
+        "store_3": "EcoKitchen Frankfurt",
+        "store_4": "FreshFork Cologne",
+        "store_5": "GreenTable Stuttgart",
+        "store_6": "UrbanBite Düsseldorf",
+        "store_7": "EcoPlate Leipzig"
+    }
 
-selected_store = st.selectbox(
-    "🏪 Select Store",
-    stores,
-    format_func=lambda x: store_labels.get(x, x),
-    key="dashboard_store"
-)
+    selected_store = st.selectbox(
+        "🏪 Select Store",
+        stores,
+        format_func=lambda x: store_labels.get(x, x),
+        key="dashboard_store"
+    )
 
-st.caption(
-    "Demo store names are used for presentation; "
-    "the source dataset contains anonymized store identifiers."
-)
+    st.caption(
+        "Demo store names are used for presentation; "
+        "the source dataset contains anonymized store identifiers."
+    )
 
-d = data[
-    data["store"].astype(str) == selected_store
-].copy().sort_values("date")
+    d = data[
+        data["store"].astype(str) == selected_store
+    ].copy().sort_values("date")
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("📈 Avg. Sales Index", f"{d['sales'].mean():.2f}")
@@ -209,22 +211,44 @@ d = data[
     c3.metric("♻️ Avg. Unsold Index", f"{d['unsold'].mean():.2f}")
     c4.metric("🗓️ Observed Days", f"{d['date'].nunique():,}")
 
-    st.caption("Sales, ordered and unsold values are scaled/anonymized indices from the source dataset and are not physical units or euro values.")
+    st.caption(
+        "Sales, ordered and unsold values are scaled/anonymized indices "
+        "from the source dataset and are not physical units or euro values."
+    )
     st.divider()
     st.subheader("📈 Historical Sales Trend")
     st.line_chart(d.set_index("date")[["sales"]], use_container_width=True)
 
     st.divider()
     st.subheader("📦 Ordering & Unsold Food")
-    st.line_chart(d.set_index("date")[["ordered", "unsold"]], use_container_width=True)
+    st.line_chart(
+        d.set_index("date")[["ordered", "unsold"]],
+        use_container_width=True
+    )
 
     st.divider()
     st.subheader("🌦️ Operational Context")
     w1, w2, w3 = st.columns(3)
-    w1.metric("🌡️ Avg. Temperature", f"{d['temperature_mean'].mean():.1f} °C" if "temperature_mean" in d else "N/A")
-    w2.metric("☀️ Avg. Sunshine", f"{d['sunshine_sum'].mean():.1f}" if "sunshine_sum" in d else "N/A")
-    w3.metric("🌧️ Avg. Precipitation", f"{d['precipitation_sum'].mean():.1f}" if "precipitation_sum" in d else "N/A")
-    st.info("GreenPlate uses historical sales together with calendar and weather information to support demand forecasting and food-waste reduction decisions.")
+    w1.metric(
+        "🌡️ Avg. Temperature",
+        f"{d['temperature_mean'].mean():.1f} °C"
+        if "temperature_mean" in d.columns else "N/A"
+    )
+    w2.metric(
+        "☀️ Avg. Sunshine",
+        f"{d['sunshine_sum'].mean():.1f}"
+        if "sunshine_sum" in d.columns else "N/A"
+    )
+    w3.metric(
+        "🌧️ Avg. Precipitation",
+        f"{d['precipitation_sum'].mean():.1f}"
+        if "precipitation_sum" in d.columns else "N/A"
+    )
+    st.info(
+        "GreenPlate uses historical sales together with calendar and weather "
+        "information to support demand forecasting and food-waste reduction decisions."
+    )
+
 
 # =========================================================
 # DEMAND FORECASTING
@@ -235,7 +259,12 @@ elif page == "Demand Forecasting":
          "Forecast sales demand using historical, calendar and weather data")
 
     stores = sorted(data["store"].dropna().astype(str).unique())
-    selected_store = st.selectbox("🏪 Select Store", stores, key="forecast_store")
+    selected_store = st.selectbox(
+        "🏪 Select Store",
+        stores,
+        format_func=lambda x: store_labels.get(x, x),
+        key="forecast_store"
+    )
     f = data[data["store"].astype(str) == selected_store].copy().sort_values("date")
 
     st.subheader("Historical Sales")
@@ -355,7 +384,12 @@ elif page == "Waste & Overproduction":
          "Analyze ordering, sales and unsold-food patterns to support waste reduction")
 
     stores = sorted(data["store"].dropna().astype(str).unique())
-    selected_store = st.selectbox("🏪 Select Store", stores, key="waste_store")
+    selected_store = st.selectbox(
+        "🏪 Select Store",
+        stores,
+        format_func=lambda x: store_labels.get(x, x),
+        key="waste_store"
+    )
     d = data[data["store"].astype(str) == selected_store].copy().sort_values("date")
     d = d.dropna(subset=["sales", "ordered", "unsold"]).copy()
 
@@ -398,7 +432,12 @@ elif page == "Autonomous Actions":
          "Review automatically generated operational recommendations before execution")
 
     stores = sorted(data["store"].dropna().astype(str).unique())
-    selected_store = st.selectbox("🏪 Select Store", stores, key="action_store")
+    selected_store = st.selectbox(
+        "🏪 Select Store",
+        stores,
+        format_func=lambda x: store_labels.get(x, x),
+        key="action_store"
+    )
     d = data[data["store"].astype(str) == selected_store].copy().sort_values("date")
     d = d.dropna(subset=["sales", "ordered", "unsold"]).copy()
 
@@ -431,7 +470,7 @@ elif page == "Autonomous Actions":
         st.markdown(
             f"""<div class="{card_class}">
             <b>{decision}</b><br>
-            Store: {selected_store}<br>
+            Store: {store_labels.get(selected_store, selected_store)}<br>
             Status: {status}<br>
             {explanation}
             </div>""",
