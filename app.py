@@ -10,7 +10,7 @@ from sklearn.metrics import mean_absolute_error
 st.set_page_config(
     page_title="GreenPlate Intelligence",
     page_icon="🌱",
-    layout="wide"
+    layout="wide",
     initial_sidebar_state="expanded"
 )
 
