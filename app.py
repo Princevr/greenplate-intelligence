@@ -167,6 +167,22 @@ def hero(title, subtitle):
     )
 
 # =========================================================
+# DEMO STORE DISPLAY NAMES
+# =========================================================
+# Presentation labels only. Original anonymized store IDs remain unchanged.
+store_labels = {
+    "store_0": "GreenBite Munich",
+    "store_1": "FreshTable Berlin",
+    "store_2": "UrbanPlate Hamburg",
+    "store_3": "EcoKitchen Frankfurt",
+    "store_4": "FreshFork Cologne",
+    "store_5": "GreenTable Stuttgart",
+    "store_6": "UrbanBite Düsseldorf",
+    "store_7": "EcoPlate Leipzig"
+}
+
+
+# =========================================================
 # DASHBOARD
 # =========================================================
 
@@ -178,16 +194,6 @@ if page == "Dashboard":
 
     stores = sorted(data["store"].dropna().astype(str).unique())
 
-    store_labels = {
-        "store_0": "GreenBite Munich",
-        "store_1": "FreshTable Berlin",
-        "store_2": "UrbanPlate Hamburg",
-        "store_3": "EcoKitchen Frankfurt",
-        "store_4": "FreshFork Cologne",
-        "store_5": "GreenTable Stuttgart",
-        "store_6": "UrbanBite Düsseldorf",
-        "store_7": "EcoPlate Leipzig"
-    }
 
     selected_store = st.selectbox(
         "🏪 Select Store",
