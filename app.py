@@ -174,9 +174,34 @@ if page == "Dashboard":
     hero("🌱 GreenPlate Intelligence",
          "Decision Intelligence for Sustainable Food Operations")
 
-    stores = sorted(data["store"].dropna().astype(str).unique())
-    selected_store = st.selectbox("🏪 Select Store", stores, key="dashboard_store")
-    d = data[data["store"].astype(str) == selected_store].copy().sort_values("date")
+   stores = sorted(data["store"].dropna().astype(str).unique())
+
+store_labels = {
+    "store_0": "GreenBite Munich",
+    "store_1": "FreshTable Berlin",
+    "store_2": "UrbanPlate Hamburg",
+    "store_3": "EcoKitchen Frankfurt",
+    "store_4": "FreshFork Cologne",
+    "store_5": "GreenTable Stuttgart",
+    "store_6": "UrbanBite Düsseldorf",
+    "store_7": "EcoPlate Leipzig"
+}
+
+selected_store = st.selectbox(
+    "🏪 Select Store",
+    stores,
+    format_func=lambda x: store_labels.get(x, x),
+    key="dashboard_store"
+)
+
+st.caption(
+    "Demo store names are used for presentation; "
+    "the source dataset contains anonymized store identifiers."
+)
+
+d = data[
+    data["store"].astype(str) == selected_store
+].copy().sort_values("date")
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("📈 Avg. Sales Index", f"{d['sales'].mean():.2f}")
