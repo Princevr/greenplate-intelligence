@@ -388,9 +388,9 @@ elif page == "Demand Forecasting":
         "precipitation_sum"
     ]
 
-    target = "sales"
+       target = "sales"
 
-      model_data = forecast_data[
+    model_data = forecast_data[
         ["date"] + features + [target]
     ].copy()
 
