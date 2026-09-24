@@ -140,6 +140,28 @@ data = load_data()
 st.sidebar.markdown("## 🌱 GreenPlate")
 st.sidebar.caption("Decision Intelligence Platform")
 
+# Demo restaurant names for presentation only.
+store_labels = {
+    "store_0": "GreenBite Munich",
+    "store_1": "FreshTable Berlin",
+    "store_2": "UrbanPlate Hamburg",
+    "store_3": "EcoKitchen Frankfurt",
+    "store_4": "FreshFork Cologne",
+    "store_5": "GreenTable Stuttgart",
+    "store_6": "UrbanBite Düsseldorf",
+    "store_7": "EcoPlate Leipzig",
+    "store_8": "GreenFork Dresden",
+}
+
+stores = sorted(data["store"].dropna().astype(str).unique())
+
+selected_store = st.sidebar.selectbox(
+    "🏪 Select Restaurant",
+    stores,
+    format_func=lambda x: store_labels.get(x, x),
+    key="global_store"
+)
+
 page = st.sidebar.radio(
     "Navigation",
     ["Dashboard", "Demand Forecasting", "Waste & Overproduction", "Autonomous Actions"]
@@ -167,22 +189,6 @@ def hero(title, subtitle):
     )
 
 # =========================================================
-# DEMO STORE DISPLAY NAMES
-# =========================================================
-# Presentation labels only. Original anonymized store IDs remain unchanged.
-store_labels = {
-    "store_0": "GreenBite Munich",
-    "store_1": "FreshTable Berlin",
-    "store_2": "UrbanPlate Hamburg",
-    "store_3": "EcoKitchen Frankfurt",
-    "store_4": "FreshFork Cologne",
-    "store_5": "GreenTable Stuttgart",
-    "store_6": "UrbanBite Düsseldorf",
-    "store_7": "EcoPlate Leipzig"
-}
-
-
-# =========================================================
 # DASHBOARD
 # =========================================================
 
@@ -192,15 +198,6 @@ if page == "Dashboard":
         "Decision Intelligence for Sustainable Food Operations"
     )
 
-    stores = sorted(data["store"].dropna().astype(str).unique())
-
-
-    selected_store = st.selectbox(
-        "🏪 Select Store",
-        stores,
-        format_func=lambda x: store_labels.get(x, x),
-        key="dashboard_store"
-    )
 
     st.caption(
         "Demo store names are used for presentation; "
@@ -264,13 +261,6 @@ elif page == "Demand Forecasting":
     hero("📈 Machine Learning Demand Forecasting",
          "Forecast sales demand using historical, calendar and weather data")
 
-    stores = sorted(data["store"].dropna().astype(str).unique())
-    selected_store = st.selectbox(
-        "🏪 Select Store",
-        stores,
-        format_func=lambda x: store_labels.get(x, x),
-        key="forecast_store"
-    )
     f = data[data["store"].astype(str) == selected_store].copy().sort_values("date")
 
     st.subheader("Historical Sales")
@@ -389,13 +379,6 @@ elif page == "Waste & Overproduction":
     hero("♻️ Waste & Overproduction Intelligence",
          "Analyze ordering, sales and unsold-food patterns to support waste reduction")
 
-    stores = sorted(data["store"].dropna().astype(str).unique())
-    selected_store = st.selectbox(
-        "🏪 Select Store",
-        stores,
-        format_func=lambda x: store_labels.get(x, x),
-        key="waste_store"
-    )
     d = data[data["store"].astype(str) == selected_store].copy().sort_values("date")
     d = d.dropna(subset=["sales", "ordered", "unsold"]).copy()
 
@@ -437,13 +420,6 @@ elif page == "Autonomous Actions":
     hero("🤖 Controlled Decision Center",
          "Review automatically generated operational recommendations before execution")
 
-    stores = sorted(data["store"].dropna().astype(str).unique())
-    selected_store = st.selectbox(
-        "🏪 Select Store",
-        stores,
-        format_func=lambda x: store_labels.get(x, x),
-        key="action_store"
-    )
     d = data[data["store"].astype(str) == selected_store].copy().sort_values("date")
     d = d.dropna(subset=["sales", "ordered", "unsold"]).copy()
 
