@@ -234,8 +234,20 @@ elif page == "Demand Forecasting":
 
     for col in features + ["sales"]:
         model_data[col] = pd.to_numeric(model_data[col], errors="coerce")
-    model_data = model_data.dropna(subset=features + ["sales"]).copy()
+   # Keep rows with valid sales and lag features
+model_data = model_data.dropna(
+    subset=["sales", "lag_1", "lag_7", "rolling_7"]
+).copy()
 
+# Fill missing predictor values instead of deleting observations
+for col in features:
+    if model_data[col].isna().any():
+        median_value = model_data[col].median()
+
+        if pd.isna(median_value):
+            median_value = 0
+
+        model_data[col] = model_data[col].fillna(median_value)
     if len(model_data) < 30:
         st.warning("Not enough complete observations are available for reliable model training for this store.")
     else:
