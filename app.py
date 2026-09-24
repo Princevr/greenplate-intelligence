@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
-
+import numpy as np
 # =========================================================
 # PAGE SETTINGS
 # =========================================================
@@ -40,29 +40,13 @@ st.markdown(
         background-color: #eef7f0;
     }
 
-   [data-testid="stMetric"] {
-    background-color: white;
-    border: 1px solid #e1e6e3;
-    padding: 18px 14px;
-    border-radius: 14px;
-    box-shadow: 0px 2px 8px rgba(0,0,0,0.04);
-    min-height: 120px;
-}
-
-[data-testid="stMetricLabel"] {
-    font-size: 14px;
-    font-weight: 600;
-}
-
-[data-testid="stMetricValue"] {
-    font-size: 26px;
-    font-weight: 600;
-}
-
-[data-testid="stMetricValue"] > div {
-    overflow: visible;
-    white-space: nowrap;
-}
+    [data-testid="stMetric"] {
+        background-color: white;
+        border: 1px solid #e1e8e3;
+        padding: 18px;
+        border-radius: 14px;
+        box-shadow: 0px 2px 8px rgba(0,0,0,0.04);
+    }
 
     .hero {
         background: linear-gradient(
@@ -129,8 +113,25 @@ st.markdown(
 # LOAD DATA
 # =========================================================
 
-data = pd.read_csv("train.csv")
-data["date"] = pd.to_datetime(data["date"])
+@st.cache_data
+def load_data():
+    df = pd.read_csv("train.csv")
+    df.columns = df.columns.str.strip()
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+
+    numeric_cols = [
+        "sales", "ordered", "unsold", "temperature_max",
+        "temperature_min", "temperature_mean", "sunshine_sum",
+        "precipitation_sum", "is_state_holiday",
+        "is_school_holiday", "is_special_day"
+    ]
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    return df.dropna(subset=["date", "store", "sales"]).sort_values(["store", "date"])
+
+data = load_data()
 
 # =========================================================
 # SIDEBAR
@@ -141,25 +142,13 @@ st.sidebar.caption("Decision Intelligence Platform")
 
 page = st.sidebar.radio(
     "Navigation",
-    [
-        "Dashboard",
-        "Demand Forecasting",
-        "Waste & Inventory Optimization",
-        "Autonomous Actions"
-    ]
+    ["Dashboard", "Demand Forecasting", "Waste & Overproduction", "Autonomous Actions"]
 )
 
 st.sidebar.divider()
-
 st.sidebar.markdown("### 📊 Dataset")
-st.sidebar.caption(
-    "Real-world food operations data from the Green AI Hub "
-    "Reduce Foodwaste project."
-)
-
-st.sidebar.caption(
-    "Sales, ordered and unsold values are scaled/anonymized."
-)
+st.sidebar.caption("Real-world food-operations data from the Green AI Hub Reduce Foodwaste project.")
+st.sidebar.caption("Sales, ordered and unsold values are scaled/anonymized indices.")
 
 # =========================================================
 # HELPER: HERO
@@ -182,999 +171,240 @@ def hero(title, subtitle):
 # =========================================================
 
 if page == "Dashboard":
+    hero("🌱 GreenPlate Intelligence",
+         "Decision Intelligence for Sustainable Food Operations")
 
-    hero(
-        "🌱 GreenPlate Intelligence",
-        "Autonomous Decision Intelligence for Sustainable Food Operations"
-    )
-
-    # --------------------------------------------------------
-    # STORE FILTER
-    # --------------------------------------------------------
-
-    stores = sorted(data["store"].dropna().unique())
-
-    selected_store = st.selectbox(
-        "🏪 Select Store",
-        stores
-    )
-
-    filtered_data = data[
-        data["store"] == selected_store
-    ].copy()
-
-    filtered_data = filtered_data.sort_values("date")
-
-    # --------------------------------------------------------
-    # KPI CARDS
-    # --------------------------------------------------------
-
-    avg_sales = filtered_data["sales"].mean()
-    avg_ordered = filtered_data["ordered"].mean()
-    avg_unsold = filtered_data["unsold"].mean()
-
-    available_days = len(filtered_data)
+    stores = sorted(data["store"].dropna().astype(str).unique())
+    selected_store = st.selectbox("🏪 Select Store", stores, key="dashboard_store")
+    d = data[data["store"].astype(str) == selected_store].copy().sort_values("date")
 
     c1, c2, c3, c4 = st.columns(4)
+    c1.metric("📈 Avg. Sales Index", f"{d['sales'].mean():.2f}")
+    c2.metric("📦 Avg. Ordered Index", f"{d['ordered'].mean():.2f}")
+    c3.metric("♻️ Avg. Unsold Index", f"{d['unsold'].mean():.2f}")
+    c4.metric("🗓️ Observed Days", f"{d['date'].nunique():,}")
 
-    c1.metric(
-        "📈 Avg. Sales Index",
-        f"{avg_sales:.2f}"
-    )
-
-    c2.metric(
-        "📦 Avg. Ordered Index",
-        f"{avg_ordered:.2f}"
-    )
-
-    c3.metric(
-        "♻️ Avg. Unsold Index",
-        f"{avg_unsold:.2f}"
-    )
-
-    c4.metric(
-        "📅 Observed Days",
-        f"{available_days:,}"
-    )
-
-    st.caption(
-        "Sales, ordered and unsold values are scaled/anonymized "
-        "indices from the source dataset and should not be interpreted "
-        "as physical units or euro values."
-    )
-
-    st.markdown("---")
-
-    # --------------------------------------------------------
-    # SALES TREND
-    # --------------------------------------------------------
-
+    st.caption("Sales, ordered and unsold values are scaled/anonymized indices from the source dataset and are not physical units or euro values.")
+    st.divider()
     st.subheader("📈 Historical Sales Trend")
+    st.line_chart(d.set_index("date")[["sales"]], use_container_width=True)
 
-    sales_chart = (
-        filtered_data[
-            ["date", "sales"]
-        ]
-        .dropna()
-        .set_index("date")
-    )
-
-    st.line_chart(
-        sales_chart,
-        use_container_width=True
-    )
-
-    st.caption(
-        "Daily sales pattern for the selected store. "
-        "Natural variation reflects real operational time-series data."
-    )
-
-    st.markdown("---")
-
-    # --------------------------------------------------------
-    # ORDERED VS UNSOLD
-    # --------------------------------------------------------
-
+    st.divider()
     st.subheader("📦 Ordering & Unsold Food")
+    st.line_chart(d.set_index("date")[["ordered", "unsold"]], use_container_width=True)
 
-    operations_chart = (
-        filtered_data[
-            ["date", "ordered", "unsold"]
-        ]
-        .dropna()
-        .set_index("date")
-    )
-
-    if not operations_chart.empty:
-
-        st.line_chart(
-            operations_chart,
-            use_container_width=True
-        )
-
-    else:
-
-        st.info(
-            "Ordered and unsold information is not available "
-            "for this store."
-        )
-
-    st.markdown("---")
-
-    # --------------------------------------------------------
-    # OPERATIONAL CONTEXT
-    # --------------------------------------------------------
-
+    st.divider()
     st.subheader("🌦️ Operational Context")
+    w1, w2, w3 = st.columns(3)
+    w1.metric("🌡️ Avg. Temperature", f"{d['temperature_mean'].mean():.1f} °C" if "temperature_mean" in d else "N/A")
+    w2.metric("☀️ Avg. Sunshine", f"{d['sunshine_sum'].mean():.1f}" if "sunshine_sum" in d else "N/A")
+    w3.metric("🌧️ Avg. Precipitation", f"{d['precipitation_sum'].mean():.1f}" if "precipitation_sum" in d else "N/A")
+    st.info("GreenPlate uses historical sales together with calendar and weather information to support demand forecasting and food-waste reduction decisions.")
 
-    col1, col2, col3 = st.columns(3)
-
-    col1.metric(
-        "🌡️ Avg. Temperature",
-        f"{filtered_data['temperature_mean'].mean():.1f} °C"
-    )
-
-    col2.metric(
-        "☀️ Avg. Sunshine",
-        f"{filtered_data['sunshine_sum'].mean():.1f}"
-    )
-
-    col3.metric(
-        "🌧️ Avg. Precipitation",
-        f"{filtered_data['precipitation_sum'].mean():.1f}"
-    )
-
-    st.info(
-        "💡 GreenPlate uses historical sales together with calendar "
-        "and weather information to support demand forecasting and "
-        "food-waste reduction decisions."
-    )
 # =========================================================
 # DEMAND FORECASTING
 # =========================================================
 
 elif page == "Demand Forecasting":
+    hero("📈 Machine Learning Demand Forecasting",
+         "Forecast sales demand using historical, calendar and weather data")
 
-    hero(
-        "📈 Machine Learning Demand Forecasting",
-        "Forecast sales demand using historical, calendar and weather data"
-    )
+    stores = sorted(data["store"].dropna().astype(str).unique())
+    selected_store = st.selectbox("🏪 Select Store", stores, key="forecast_store")
+    f = data[data["store"].astype(str) == selected_store].copy().sort_values("date")
 
-    # --------------------------------------------------------
-    # STORE SELECTION
-    # --------------------------------------------------------
+    st.subheader("Historical Sales")
+    st.line_chart(f.set_index("date")[["sales"]], use_container_width=True)
 
-    stores = sorted(data["store"].dropna().unique())
+    f["day_of_week"] = f["date"].dt.dayofweek
+    f["month"] = f["date"].dt.month
+    f["day_of_year"] = f["date"].dt.dayofyear
+    f["lag_1"] = f["sales"].shift(1)
+    f["lag_7"] = f["sales"].shift(7)
+    f["rolling_7"] = f["sales"].shift(1).rolling(7).mean()
 
-    selected_store = st.selectbox(
-        "🏪 Select Store",
-        stores,
-        key="forecast_store"
-    )
-
-    forecast_data = data[
-        data["store"] == selected_store
-    ].copy()
-
-    forecast_data = forecast_data.sort_values("date")
-
-    # --------------------------------------------------------
-    # FEATURE ENGINEERING
-    # --------------------------------------------------------
-
-    forecast_data["day_of_week"] = (
-        forecast_data["date"].dt.dayofweek
-    )
-
-    forecast_data["month"] = (
-        forecast_data["date"].dt.month
-    )
-
-    forecast_data["day_of_year"] = (
-        forecast_data["date"].dt.dayofyear
-    )
-
-    features = [
-        "day_of_week",
-        "month",
-        "day_of_year",
-        "is_state_holiday",
-        "is_school_holiday",
-        "is_special_day",
-        "temperature_max",
-        "temperature_min",
-        "temperature_mean",
-        "sunshine_sum",
-        "precipitation_sum"
+    candidates = [
+        "day_of_week", "month", "day_of_year", "is_state_holiday",
+        "is_school_holiday", "is_special_day", "temperature_max",
+        "temperature_min", "temperature_mean", "sunshine_sum",
+        "precipitation_sum", "lag_1", "lag_7", "rolling_7"
     ]
+    features = [x for x in candidates if x in f.columns]
+    model_data = f[["date"] + features + ["sales"]].copy()
 
-       target = "sales"
-
-    model_data = forecast_data[
-        ["date"] + features + [target]
-    ].copy()
-
-    # Convert all model features and target to numeric
-    for col in features + [target]:
-        model_data[col] = pd.to_numeric(
-            model_data[col],
-            errors="coerce"
-        )
-
-    # Remove rows that cannot be used by the ML model
-    model_data = model_data.dropna(
-        subset=features + [target]
-    ).copy()
-
-    # --------------------------------------------------------
-    # CHECK DATA
-    # --------------------------------------------------------
+    for col in features + ["sales"]:
+        model_data[col] = pd.to_numeric(model_data[col], errors="coerce")
+    model_data = model_data.dropna(subset=features + ["sales"]).copy()
 
     if len(model_data) < 30:
-
-        st.warning(
-            "Not enough observations are available for "
-            "reliable model training for this store."
-        )
-
+        st.warning("Not enough complete observations are available for reliable model training for this store.")
     else:
+        split = int(len(model_data) * 0.80)
+        train = model_data.iloc[:split]
+        test = model_data.iloc[split:]
 
-        # ----------------------------------------------------
-        # CHRONOLOGICAL TRAIN / TEST SPLIT
-        # ----------------------------------------------------
-
-        split_index = int(
-            len(model_data) * 0.80
-        )
-
-        train_data = model_data.iloc[
-            :split_index
-        ].copy()
-
-        test_data = model_data.iloc[
-            split_index:
-        ].copy()
-
-        X_train = train_data[features]
-        y_train = train_data[target]
-
-        X_test = test_data[features]
-        y_test = test_data[target]
-
-        # ----------------------------------------------------
-        # MACHINE LEARNING MODEL
-        # ----------------------------------------------------
+        X_train, y_train = train[features], train["sales"]
+        X_test, y_test = test[features], test["sales"]
 
         model = RandomForestRegressor(
-            n_estimators=200,
-            random_state=42,
-            min_samples_leaf=2
+            n_estimators=300, random_state=42,
+            min_samples_leaf=2, n_jobs=-1
         )
+        model.fit(X_train, y_train)
+        pred = model.predict(X_test)
 
-        model.fit(
-            X_train,
-            y_train
-        )
+        mae = mean_absolute_error(y_test, pred)
+        baseline = np.repeat(y_train.iloc[-1], len(y_test))
+        baseline_mae = mean_absolute_error(y_test, baseline)
 
-        predictions = model.predict(
-            X_test
-        )
+        st.subheader("🤖 Model Performance")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("MAE", f"{mae:.3f}")
+        m2.metric("Naive Baseline MAE", f"{baseline_mae:.3f}")
+        improvement = ((baseline_mae - mae) / baseline_mae * 100) if baseline_mae else None
+        m3.metric("Improvement vs Baseline", f"{improvement:.1f}%" if improvement is not None else "N/A")
 
-        # ----------------------------------------------------
-        # MODEL METRICS
-        # ----------------------------------------------------
+        comparison = pd.DataFrame({
+            "Date": test["date"].values,
+            "Actual Sales": y_test.values,
+            "Predicted Sales": pred
+        })
+        st.subheader("Actual vs Predicted Sales")
+        st.line_chart(comparison.set_index("Date"), use_container_width=True)
+        st.caption("The final 20% of observations are used as a chronological test period.")
 
-        mae = mean_absolute_error(
-            y_test,
-            predictions
-        )
+        latest = f.iloc[-1]
+        next_date = latest["date"] + pd.Timedelta(days=1)
+        next_row = {}
+        for feature in features:
+            if feature == "day_of_week":
+                value = next_date.dayofweek
+            elif feature == "month":
+                value = next_date.month
+            elif feature == "day_of_year":
+                value = next_date.dayofyear
+            elif feature == "lag_1":
+                value = f["sales"].iloc[-1]
+            elif feature == "lag_7":
+                value = f["sales"].iloc[-7] if len(f) >= 7 else f["sales"].iloc[-1]
+            elif feature == "rolling_7":
+                value = f["sales"].tail(7).mean()
+            else:
+                value = latest.get(feature, np.nan)
+                if pd.isna(value):
+                    value = model_data[feature].median()
+            next_row[feature] = value
 
-        rmse = (
-            (
-                (y_test.values - predictions) ** 2
-            ).mean()
-        ) ** 0.5
+        next_x = pd.DataFrame([next_row], columns=features)
+        next_prediction = model.predict(next_x)[0]
 
-        # MAPE is only calculated where actual sales
-        # values are sufficiently far from zero.
-        mape_mask = (
-            abs(y_test.values) > 0.1
-        )
+        st.subheader("🔮 Next-Day Sales Forecast")
+        n1, n2 = st.columns(2)
+        n1.metric("Forecast Date", next_date.strftime("%d %b %Y"))
+        n2.metric("Predicted Sales Index", f"{next_prediction:.2f}")
+        st.info("Prototype forecast: future weather and special-day inputs use the latest available values unless already known.")
 
-        if mape_mask.sum() > 0:
-
-            mape = (
-                abs(
-                    (
-                        y_test.values[mape_mask]
-                        - predictions[mape_mask]
-                    )
-                    / y_test.values[mape_mask]
-                ).mean()
-                * 100
-            )
-
-        else:
-
-            mape = None
-
-        # ----------------------------------------------------
-        # MODEL SUMMARY
-        # ----------------------------------------------------
-
-        st.subheader("🧠 Forecast Model Performance")
-
-        c1, c2, c3, c4 = st.columns(4)
-
-        c1.metric(
-            "Training Records",
-            f"{len(train_data):,}"
-        )
-
-        c2.metric(
-            "Test Records",
-            f"{len(test_data):,}"
-        )
-
-        c3.metric(
-            "MAE",
-            f"{mae:.3f}"
-        )
-
-        c4.metric(
-            "RMSE",
-            f"{rmse:.3f}"
-        )
-
-        if mape is not None:
-
-            st.caption(
-                f"MAPE (excluding near-zero actual values): "
-                f"{mape:.1f}%"
-            )
-
-        st.info(
-            "The model is trained on the first 80% of observations "
-            "and evaluated on the most recent 20%. This chronological "
-            "split avoids randomly mixing earlier and later dates."
-        )
-
-        st.divider()
-
-        # ----------------------------------------------------
-        # ACTUAL VS PREDICTED
-        # ----------------------------------------------------
-
-        st.subheader(
-            "📊 Actual vs Predicted Sales"
-        )
-
-        forecast_results = pd.DataFrame(
-            {
-                "date": test_data["date"].values,
-                "Actual Sales": y_test.values,
-                "Predicted Sales": predictions
-            }
-        )
-
-        chart_data = (
-            forecast_results
-            .set_index("date")
-        )
-
-        st.line_chart(
-            chart_data,
-            use_container_width=True
-        )
-
-        st.caption(
-            "The chart compares actual sales with GreenPlate's "
-            "machine-learning predictions for the test period. "
-            "Sales values are scaled/anonymized indices."
-        )
-
-        st.divider()
-
-        # ----------------------------------------------------
-        # RECENT FORECAST RESULTS
-        # ----------------------------------------------------
-
-        st.subheader(
-            "🔎 Recent Forecast Results"
-        )
-
-        recent_forecasts = (
-            forecast_results
-            .tail(20)
-            .copy()
-        )
-
-        recent_forecasts[
-            "Forecast Error"
-        ] = (
-            recent_forecasts["Actual Sales"]
-            - recent_forecasts["Predicted Sales"]
-        ).abs()
-
-        recent_forecasts[
-            "Actual Sales"
-        ] = recent_forecasts[
-            "Actual Sales"
-        ].round(2)
-
-        recent_forecasts[
-            "Predicted Sales"
-        ] = recent_forecasts[
-            "Predicted Sales"
-        ].round(2)
-
-        recent_forecasts[
-            "Forecast Error"
-        ] = recent_forecasts[
-            "Forecast Error"
-        ].round(2)
-
-        st.dataframe(
-            recent_forecasts.sort_values(
-                "date",
-                ascending=False
-            ),
-            use_container_width=True,
-            hide_index=True
-        )
-
-        st.divider()
-
-        # ----------------------------------------------------
-        # FEATURE IMPORTANCE
-        # ----------------------------------------------------
-
-        st.subheader(
-            "🔍 What Influences the Forecast?"
-        )
-
-        feature_importance = pd.DataFrame(
-            {
-                "Feature": features,
-                "Importance": model.feature_importances_
-            }
-        ).sort_values(
-            "Importance",
-            ascending=False
-        )
-
-        st.dataframe(
-            feature_importance,
-            use_container_width=True,
-            hide_index=True
-        )
-
-        st.caption(
-            "Feature importance indicates which calendar and "
-            "weather variables contributed most strongly to "
-            "the Random Forest model's predictions."
-        )
-
-        st.divider()
-
-        # ----------------------------------------------------
-        # GREENPLATE INSIGHT
-        # ----------------------------------------------------
-
-        st.subheader(
-            "🤖 GreenPlate Forecast Insight"
-        )
-
-        latest_actual = (
-            forecast_results["Actual Sales"].iloc[-1]
-        )
-
-        latest_prediction = (
-            forecast_results["Predicted Sales"].iloc[-1]
-        )
-
-        difference = (
-            latest_prediction - latest_actual
-        )
-
-        if difference > mae:
-
-            st.info(
-                "📈 The latest predicted demand is above the "
-                "observed sales level. GreenPlate recommends "
-                "monitoring whether demand is increasing before "
-                "adjusting future ordering decisions."
-            )
-
-        elif difference < -mae:
-
-            st.warning(
-                "📉 The latest predicted demand is below the "
-                "observed sales level. Review recent demand "
-                "patterns before reducing future order levels."
-            )
-
-        else:
-
-            st.success(
-                "✅ The latest prediction is reasonably close "
-                "to the observed sales level based on the "
-                "model's average absolute error."
-            )
-
-        st.caption(
-            "This prototype demonstrates decision support rather "
-            "than guaranteed future demand. Forecast accuracy can "
-            "vary by store and time period."
-        )
 # =========================================================
-# WASTE & INVENTORY OPTIMIZATION
+# WASTE & OVERPRODUCTION
 # =========================================================
 
-elif page == "Waste & Inventory Optimization":
+elif page == "Waste & Overproduction":
+    hero("♻️ Waste & Overproduction Intelligence",
+         "Analyze ordering, sales and unsold-food patterns to support waste reduction")
 
-    hero(
-        "♻️ Waste & Overproduction Intelligence",
-        "Analyze ordering, sales and unsold-food patterns to support waste reduction"
-    )
+    stores = sorted(data["store"].dropna().astype(str).unique())
+    selected_store = st.selectbox("🏪 Select Store", stores, key="waste_store")
+    d = data[data["store"].astype(str) == selected_store].copy().sort_values("date")
+    d = d.dropna(subset=["sales", "ordered", "unsold"]).copy()
 
-    # --------------------------------------------------------
-    # STORE SELECTION
-    # --------------------------------------------------------
-
-    stores = sorted(data["store"].dropna().unique())
-
-    selected_store = st.selectbox(
-        "🏪 Select Store",
-        stores,
-        key="waste_store"
-    )
-
-    waste_data = data[
-        data["store"] == selected_store
-    ].copy()
-
-    waste_data = waste_data.sort_values("date")
-
-    # Only use rows where operational data is available
-    operations_data = waste_data.dropna(
-        subset=["sales", "ordered", "unsold"]
-    ).copy()
-
-    if operations_data.empty:
-
-        st.warning(
-            "Ordered and unsold information is not available "
-            "for this store."
-        )
-
+    if d.empty:
+        st.warning("This store does not contain enough ordered/unsold observations for this analysis.")
     else:
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Avg. Sales Index", f"{d['sales'].mean():.2f}")
+        c2.metric("Avg. Ordered Index", f"{d['ordered'].mean():.2f}")
+        c3.metric("Avg. Unsold Index", f"{d['unsold'].mean():.2f}")
+        c4.metric("Latest Unsold Index", f"{d['unsold'].iloc[-1]:.2f}")
 
-        # ----------------------------------------------------
-        # KPIs
-        # ----------------------------------------------------
-
-        avg_sales = operations_data["sales"].mean()
-        avg_ordered = operations_data["ordered"].mean()
-        avg_unsold = operations_data["unsold"].mean()
-
-        observations = len(operations_data)
-
-        col1, col2, col3, col4 = st.columns(4)
-
-        col1.metric(
-            "📈 Avg. Sales Index",
-            f"{avg_sales:.2f}"
-        )
-
-        col2.metric(
-            "📦 Avg. Ordered Index",
-            f"{avg_ordered:.2f}"
-        )
-
-        col3.metric(
-            "♻️ Avg. Unsold Index",
-            f"{avg_unsold:.2f}"
-        )
-
-        col4.metric(
-            "📅 Observations",
-            f"{observations:,}"
-        )
-
-        st.caption(
-            "Sales, ordered and unsold values are scaled/anonymized "
-            "indices from the source dataset. They should not be "
-            "interpreted as physical product units."
-        )
-
+        st.caption("These are anonymized/scaled source values. The analysis compares patterns rather than physical quantities.")
         st.divider()
+        st.subheader("📊 Sales, Ordered & Unsold Trend")
+        st.line_chart(d.set_index("date")[["sales", "ordered", "unsold"]], use_container_width=True)
 
-        # ----------------------------------------------------
-        # ORDERED VS SALES
-        # ----------------------------------------------------
+        d["unsold_7d_avg"] = d["unsold"].rolling(7).mean()
+        st.subheader("♻️ Unsold-Food Pattern")
+        st.line_chart(d.set_index("date")[["unsold", "unsold_7d_avg"]], use_container_width=True)
 
-        st.subheader("📦 Ordered vs. Sales")
+        recent = d.tail(min(28, len(d)))
+        recent_unsold = recent["unsold"].mean()
+        historical_unsold = d["unsold"].mean()
 
-        order_sales_chart = (
-            operations_data[
-                ["date", "ordered", "sales"]
-            ]
-            .set_index("date")
-        )
-
-        st.line_chart(
-            order_sales_chart,
-            use_container_width=True
-        )
-
-        st.caption(
-            "Comparing ordering and sales patterns can help identify "
-            "periods of potential overproduction or under-ordering."
-        )
-
-        st.divider()
-
-        # ----------------------------------------------------
-        # UNSOLD TREND
-        # ----------------------------------------------------
-
-        st.subheader("♻️ Unsold Food Trend")
-
-        unsold_chart = (
-            operations_data[
-                ["date", "unsold"]
-            ]
-            .set_index("date")
-        )
-
-        st.line_chart(
-            unsold_chart,
-            use_container_width=True
-        )
-
-        st.divider()
-
-        # ----------------------------------------------------
-        # RECENT OPERATIONAL ANALYSIS
-        # ----------------------------------------------------
-
-        st.subheader("🔎 Recent Operational Signals")
-
-        recent = operations_data.tail(30).copy()
-
-        recent["Order-Sales Gap"] = (
-            recent["ordered"] - recent["sales"]
-        )
-
-        recent["Unsold Risk"] = recent["unsold"].apply(
-            lambda x:
-            "High"
-            if x > operations_data["unsold"].quantile(0.75)
-            else (
-                "Medium"
-                if x > operations_data["unsold"].median()
-                else "Low"
-            )
-        )
-
-        display_table = recent[
-            [
-                "date",
-                "sales",
-                "ordered",
-                "unsold",
-                "Order-Sales Gap",
-                "Unsold Risk"
-            ]
-        ].copy()
-
-        display_table.columns = [
-            "Date",
-            "Sales Index",
-            "Ordered Index",
-            "Unsold Index",
-            "Order-Sales Gap",
-            "Unsold Risk"
-        ]
-
-        st.dataframe(
-            display_table.sort_values(
-                "Date",
-                ascending=False
-            ),
-            use_container_width=True,
-            hide_index=True
-        )
-
-        st.divider()
-
-        # ----------------------------------------------------
-        # GREENPLATE RECOMMENDATION
-        # ----------------------------------------------------
-
-        st.subheader("🤖 GreenPlate Decision Support")
-
-        latest = operations_data.iloc[-1]
-
-        high_unsold_threshold = (
-            operations_data["unsold"].quantile(0.75)
-        )
-
-        if latest["unsold"] > high_unsold_threshold:
-
-            st.warning(
-                "⚠️ Elevated unsold-food signal detected. "
-                "GreenPlate recommends reviewing the next ordering "
-                "decision and recent demand patterns before increasing "
-                "the order level."
-            )
-
-        elif latest["ordered"] > latest["sales"]:
-
-            st.info(
-                "📦 The latest ordering index is above the sales index. "
-                "Monitor upcoming demand and unsold-food levels before "
-                "adjusting future orders."
-            )
-
+        st.subheader("🤖 GreenPlate Recommendation")
+        if recent_unsold > historical_unsold and recent["ordered"].mean() > recent["sales"].mean():
+            st.warning("Recent unsold-food levels are above the historical average while ordering is also above sales. Review upcoming order levels before approval.")
+        elif recent_unsold > historical_unsold:
+            st.warning("Recent unsold-food levels are above the historical average. Review demand, calendar and weather conditions before adjusting orders.")
         else:
-
-            st.success(
-                "✅ No elevated unsold-food signal is detected in the "
-                "latest observation. Continue monitoring demand and "
-                "ordering patterns."
-            )
-
-        st.caption(
-            "GreenPlate recommendations shown here are decision-support "
-            "signals for the academic prototype and do not automatically "
-            "execute supplier orders."
-        )
+            st.success("Recent unsold-food levels are not above the historical average. Continue monitoring before changing ordering levels.")
 
 # =========================================================
 # AUTONOMOUS ACTIONS
 # =========================================================
 
 elif page == "Autonomous Actions":
+    hero("🤖 Controlled Decision Center",
+         "Review automatically generated operational recommendations before execution")
 
-    hero(
-        "🤖 GreenPlate Decision Center",
-        "Review data-driven operational recommendations and controlled actions"
-    )
+    stores = sorted(data["store"].dropna().astype(str).unique())
+    selected_store = st.selectbox("🏪 Select Store", stores, key="action_store")
+    d = data[data["store"].astype(str) == selected_store].copy().sort_values("date")
+    d = d.dropna(subset=["sales", "ordered", "unsold"]).copy()
 
-    # --------------------------------------------------------
-    # STORE SELECTION
-    # --------------------------------------------------------
-
-    stores = sorted(data["store"].dropna().unique())
-
-    selected_store = st.selectbox(
-        "🏪 Select Store",
-        stores,
-        key="action_store"
-    )
-
-    action_data = data[
-        data["store"] == selected_store
-    ].copy()
-
-    action_data = action_data.sort_values("date")
-
-    action_data = action_data.dropna(
-        subset=["sales", "ordered", "unsold"]
-    ).copy()
-
-    if action_data.empty:
-
-        st.warning(
-            "Operational ordering and unsold-food data "
-            "is not available for this store."
-        )
-
+    if d.empty:
+        st.warning("No complete sales, ordered and unsold observations are available for this store.")
     else:
+        recent = d.tail(min(28, len(d)))
+        historical_unsold = d["unsold"].mean()
+        recent_unsold = recent["unsold"].mean()
+        recent_sales = recent["sales"].mean()
+        recent_ordered = recent["ordered"].mean()
 
-        # ----------------------------------------------------
-        # LATEST OBSERVATION
-        # ----------------------------------------------------
-
-        latest = action_data.iloc[-1]
-
-        latest_date = latest["date"]
-
-        sales_index = latest["sales"]
-        ordered_index = latest["ordered"]
-        unsold_index = latest["unsold"]
-
-        median_unsold = action_data["unsold"].median()
-
-        high_unsold = action_data[
-            "unsold"
-        ].quantile(0.75)
-
-        # ----------------------------------------------------
-        # CURRENT STATUS
-        # ----------------------------------------------------
-
-        st.subheader("📊 Latest Operational Status")
-
-        c1, c2, c3, c4 = st.columns(4)
-
-        c1.metric(
-            "📅 Latest Date",
-            latest_date.strftime("%d %b %Y")
-        )
-
-        c2.metric(
-            "📈 Sales Index",
-            f"{sales_index:.2f}"
-        )
-
-        c3.metric(
-            "📦 Ordered Index",
-            f"{ordered_index:.2f}"
-        )
-
-        c4.metric(
-            "♻️ Unsold Index",
-            f"{unsold_index:.2f}"
-        )
-
-        st.caption(
-            "Operational values are scaled/anonymized indices "
-            "from the source dataset."
-        )
-
-        st.divider()
-
-        # ----------------------------------------------------
-        # DECISION ENGINE
-        # ----------------------------------------------------
-
-        st.subheader("🧠 GreenPlate Decision Engine")
-
-        if unsold_index > high_unsold:
-
-            decision = "Manager Review"
-            risk = "High"
-
-            st.error(
-                "🔴 High unsold-food signal detected."
-            )
-
-            st.write(
-                "GreenPlate recommends reviewing recent demand "
-                "and reducing the next ordering level if the "
-                "lower-demand pattern is expected to continue."
-            )
-
-        elif unsold_index > median_unsold:
-
-            decision = "Monitor / Adjust"
-            risk = "Medium"
-
-            st.warning(
-                "🟠 Moderate unsold-food signal detected."
-            )
-
-            st.write(
-                "GreenPlate recommends monitoring upcoming "
-                "demand before increasing the next order."
-            )
-
-        elif ordered_index > sales_index:
-
-            decision = "Monitor Order Level"
-            risk = "Medium"
-
-            st.warning(
-                "🟡 Ordering is currently above the sales index."
-            )
-
-            st.write(
-                "Review recent demand and unsold-food patterns "
-                "before increasing future orders."
-            )
-
+        if recent_unsold > historical_unsold and recent_ordered > recent_sales:
+            decision = "Review / Reduce Upcoming Order"
+            status = "Manager Approval Required"
+            explanation = "Recent unsold-food levels are above the historical average and recent ordering is above sales."
+            card_class = "status-warning"
+        elif recent_unsold > historical_unsold:
+            decision = "Monitor Unsold-Food Risk"
+            status = "Review Recommended"
+            explanation = "Recent unsold-food levels are above the store's historical average."
+            card_class = "status-warning"
         else:
-
             decision = "Maintain Current Plan"
-            risk = "Low"
+            status = "No Intervention Required"
+            explanation = "Recent unsold-food levels are not above the store's historical average."
+            card_class = "status-good"
 
-            st.success(
-                "🟢 No elevated operational risk signal detected."
-            )
+        st.subheader("⚡ Current Recommendation")
+        st.markdown(
+            f"""<div class="{card_class}">
+            <b>{decision}</b><br>
+            Store: {selected_store}<br>
+            Status: {status}<br>
+            {explanation}
+            </div>""",
+            unsafe_allow_html=True
+        )
 
-            st.write(
-                "Current ordering and sales patterns do not "
-                "trigger an adjustment recommendation."
-            )
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Recent Avg. Sales Index", f"{recent_sales:.2f}")
+        c2.metric("Recent Avg. Ordered Index", f"{recent_ordered:.2f}")
+        c3.metric("Recent Avg. Unsold Index", f"{recent_unsold:.2f}")
+
+        st.subheader("📋 Decision Evidence")
+        cols = ["date", "sales", "ordered", "unsold"]
+        cols += [x for x in ["temperature_mean", "sunshine_sum", "precipitation_sum", "is_special_day"] if x in recent.columns]
+        st.dataframe(recent[cols].tail(14), use_container_width=True, hide_index=True)
 
         st.divider()
-
-        # ----------------------------------------------------
-        # CONTROLLED ACTION
-        # ----------------------------------------------------
-
-        st.subheader("⚙️ Controlled Action")
-
-        col1, col2 = st.columns(2)
-
-        col1.metric(
-            "Risk Level",
-            risk
-        )
-
-        col2.metric(
-            "Recommended Action",
-            decision
-        )
-
-        if decision == "Manager Review":
-
-            st.warning(
-                "👤 Human approval required before any ordering "
-                "adjustment is made."
-            )
-
-        elif decision == "Monitor / Adjust":
-
-            st.info(
-                "🔍 GreenPlate recommends monitoring the next "
-                "demand period before adjusting the order level."
-            )
-
-        elif decision == "Monitor Order Level":
-
-            st.info(
-                "📦 GreenPlate recommends checking whether the "
-                "current order level remains appropriate for "
-                "expected demand."
-            )
-
-        else:
-
-            st.success(
-                "✅ Continue the current operational plan."
-            )
-
-        st.divider()
-
-        # ----------------------------------------------------
-        # DECISION TRANSPARENCY
-        # ----------------------------------------------------
-
-        st.subheader("🔎 Why did GreenPlate recommend this?")
-
-        explanation = pd.DataFrame(
-            {
-                "Decision Factor": [
-                    "Sales Index",
-                    "Ordered Index",
-                    "Unsold Index",
-                    "Median Historical Unsold",
-                    "High Unsold Threshold"
-                ],
-                "Value": [
-                    round(sales_index, 2),
-                    round(ordered_index, 2),
-                    round(unsold_index, 2),
-                    round(median_unsold, 2),
-                    round(high_unsold, 2)
-                ]
-            }
-        )
-
-        st.dataframe(
-            explanation,
-            use_container_width=True,
-            hide_index=True
-        )
-
-        st.info(
-            "Prototype note: GreenPlate currently generates "
-            "decision-support recommendations. It does not place "
-            "supplier orders automatically. In a future production "
-            "system, approved actions could be integrated with "
-            "ERP or supplier-management systems."
-        )
+        st.info("Prototype note: GreenPlate currently generates controlled decision recommendations only. In a real deployment, approved actions could be transmitted to ERP, inventory or supplier systems through APIs after authorization.")
