@@ -390,9 +390,21 @@ elif page == "Demand Forecasting":
 
     target = "sales"
 
-    model_data = forecast_data[
-        ["date"] + features + [target]
-    ].dropna().copy()
+   model_data = forecast_data[
+    ["date"] + features + [target]
+].copy()
+
+# Convert all model features and target to numeric
+for col in features + [target]:
+    model_data[col] = pd.to_numeric(
+        model_data[col],
+        errors="coerce"
+    )
+
+# Remove rows that cannot be used by the ML model
+model_data = model_data.dropna(
+    subset=features + [target]
+).copy()
 
     # --------------------------------------------------------
     # CHECK DATA
