@@ -22,6 +22,18 @@ h1,h2,h3{color:#12392d;letter-spacing:-.025em}h1{font-weight:750!important}
 @media(max-width:800px){.block-container{padding:1rem}.hero{padding:23px}.hero h1{font-size:1.65rem!important}}
 </style>''', unsafe_allow_html=True)
 
+st.markdown('''<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+html,body,[class*="css"]{font-family:'DM Sans',sans-serif}.stApp{background:#f5f8f5;color:#172b22}.block-container{padding-top:1.25rem;padding-bottom:3rem;max-width:1500px}
+h1,h2,h3{font-family:'Manrope',sans-serif;letter-spacing:-.035em}h1{font-weight:800!important}
+[data-testid="stSidebar"]{background:linear-gradient(180deg,#0e2d23,#143d2e 58%,#174735)}[data-testid="stSidebar"] [data-testid="stRadio"] label{padding:9px 11px;border-radius:10px;font-size:13px;font-weight:600}[data-testid="stSidebar"] [data-testid="stRadio"] label:hover{background:#245541}
+.hero{background:radial-gradient(circle at 88% 12%,#3d916b66 0,transparent 32%),linear-gradient(115deg,#10382b,#1b6044 58%,#31835a);padding:32px 34px;border-radius:22px;color:white;margin:10px 0 24px;box-shadow:0 14px 35px #14412d1b}.hero h1{font-size:2.05rem!important}.eyebrow{font-size:11px;letter-spacing:.14em;font-weight:800;text-transform:uppercase;color:#a6d6b8;margin-bottom:10px}
+.topline{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:0 0 14px}.wordmark{font-family:'Manrope',sans-serif;font-weight:800;color:#164d36;font-size:18px}.wordmark span{color:#55946b}.topmeta{font-size:12px;color:#6d7d73;background:#fff;border:1px solid #e3ebe5;border-radius:999px;padding:8px 12px}
+.section-kicker{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#6e8c78;margin:4px 0 8px}.feature-card,.insight-card{background:#fff;border:1px solid #e3ebe5;border-radius:16px;padding:18px;box-shadow:0 4px 16px #163e2c07}.feature-card{min-height:150px;margin-bottom:10px}.feature-icon{width:38px;height:38px;border-radius:12px;background:#e9f5ec;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:13px}.feature-title{font-weight:750;color:#1a3b2b;font-size:15px;margin-bottom:6px}.feature-desc{font-size:12px;line-height:1.55;color:#708077}
+[data-testid="stMetric"]{background:white;border:1px solid #e3ebe5;border-radius:15px;padding:18px 19px;box-shadow:0 4px 16px #163e2c06;min-height:110px}[data-testid="stMetricValue"]{color:#163f2e;font-weight:800;font-family:'Manrope',sans-serif}[data-testid="stDataFrame"]{border:1px solid #e3ebe5;border-radius:13px;overflow:hidden}.stButton>button,.stDownloadButton>button{border-radius:10px;font-weight:700;min-height:42px}[data-testid="stAlert"]{border-radius:12px}
+@media(max-width:800px){.block-container{padding:1rem}.hero{padding:23px}.hero h1{font-size:1.65rem!important}.feature-card{min-height:unset}}
+</style>''', unsafe_allow_html=True)
+
 SOURCES = {
  "Restaurant demand (Germany)": ("data_preprocessed (1)(1).csv", ";", "Daily restaurant product-category demand and engineered features."),
  "Grupo Bimbo sales (Mexico)": ("train_sample_30k.csv", ",", "30,000-row bakery sales/returns sample; not restaurant-specific."),
@@ -85,13 +97,48 @@ def choose_target(key="target"):
     return st.selectbox("Demand measure", targets, index=targets.index(default), key=key)
 
 if page == "Dashboard":
-    hero("🌱 GreenPlate Intelligence", "Decision intelligence for sustainable food operations")
-    st.write("This prototype demonstrates selected analytics using separate sample datasets. It is not a production decision system.")
-    a,b,c = st.columns(3); a.metric("Selected dataset", source); b.metric("Rows loaded", f"{len(df):,}"); c.metric("Columns loaded", f"{len(df.columns):,}")
-    st.info("Restaurant demand supports historical category-demand analysis; Grupo Bimbo supports bakery demand and distribution proxies; Open Food Facts supports product-level exploration. Do not merge these unrelated datasets.")
-    st.subheader("Seven core features")
-    st.markdown("""1. **Demand Forecasting** — supported by restaurant demand and Grupo Bimbo samples.\n2. **Inventory Intelligence** — demand-based indicators only; stock-on-hand is required for real decisions.\n3. **Supplier & Procurement Intelligence** — supplier scenario only; verified prices and lead times are not supplied.\n4. **Food-Waste Intelligence** — actual waste requires measured discarded quantities; returns are not automatically waste.\n5. **Customer Intelligence** — Grupo Bimbo has customer IDs, but churn requires dated purchase histories and a defined churn rule.\n6. **Logistics & Delivery Optimisation** — actual routing requires coordinates, time windows, vehicle capacity and routes.\n7. **ESG & Sustainability Reporting** — product packaging fields are not a company carbon footprint.""")
-    st.subheader("Data preview"); st.dataframe(df.head(10), use_container_width=True)
+    st.markdown("<div class='topline'><div class='wordmark'>🌿 GreenPlate <span>Intelligence</span></div><div class='topmeta'>● Demo workspace &nbsp; · &nbsp; Sustainable food operations</div></div>", unsafe_allow_html=True)
+    st.markdown("""<div class="hero"><div class="eyebrow">OPERATIONS INTELLIGENCE PLATFORM</div><h1 style="color:white!important">Good decisions start with better visibility.</h1><p>Understand demand, improve operational planning and explore sustainability signals — all in one workspace designed for food businesses.</p></div>""", unsafe_allow_html=True)
+    st.markdown("<div class='section-kicker'>WORKSPACE OVERVIEW</div>", unsafe_allow_html=True)
+    a,b,c,d=st.columns(4)
+    a.metric("Records analysed",f"{len(df):,}",help="Rows in the selected dataset")
+    b.metric("Data fields",f"{len(df.columns):,}")
+    c.metric("Numeric measures",f"{len(df.select_dtypes(include=np.number).columns):,}")
+    d.metric("Data completeness",f"{100*(1-df.isna().sum().sum()/max(1,df.size)):.1f}%",help="Share of non-missing cells")
+    left,right=st.columns([1.4,1],gap="large")
+    with left:
+        st.markdown("<div class='section-kicker'>DATA SNAPSHOT</div><div class='insight-card'>",unsafe_allow_html=True)
+        st.markdown(f"**{source}**")
+        st.caption(description)
+        if source == "Restaurant demand (Germany)" and "DEMAND_DATE" in df:
+            valid=df.dropna(subset=["DEMAND_DATE"])
+            if not valid.empty: st.markdown(f"**Coverage:** {valid['DEMAND_DATE'].min():%d %b %Y} – {valid['DEMAND_DATE'].max():%d %b %Y}")
+            available=[c for c in targets if c in df.columns]
+            if available:
+                metric_col="TOTAL" if "TOTAL" in available else available[0]
+                trend=df.groupby("DEMAND_DATE")[metric_col].apply(lambda x:numeric(x).sum(min_count=1)).dropna().sort_index()
+                st.line_chart(trend.tail(90),use_container_width=True)
+                st.caption(f"Daily trend · {metric_col} · latest 90 observations")
+        elif source == "Grupo Bimbo sales (Mexico)" and "Demanda_uni_equil" in df:
+            st.bar_chart(df.groupby("Semana")["Demanda_uni_equil"].sum().sort_index(),use_container_width=True)
+            st.caption("Weekly adjusted demand from the Grupo Bimbo sample")
+        else: st.info("This is a product catalogue, not a sales time series. Explore product and packaging attributes in ESG reporting.")
+        st.markdown("</div>",unsafe_allow_html=True)
+    with right:
+        st.markdown("<div class='section-kicker'>PLATFORM STATUS</div><div class='insight-card'>",unsafe_allow_html=True)
+        st.markdown("**Your intelligence modules**")
+        st.caption("Each module uses only the selected dataset. Unsupported insights are clearly identified.")
+        rows=[("Demand forecasting","Available for demand data" if source != "Open Food Facts products" else "Needs sales history"),("Inventory intelligence","Planning signals only"),("Supplier & procurement","Scenario comparison"),("Food-waste intelligence","Waste measurements needed"),("Customer intelligence","Customer history needed"),("Logistics optimisation","Route data needed"),("ESG reporting","Product attributes where available")]
+        for label,status in rows:
+            st.markdown(f"<div style='display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #edf1ed'><span style='font-size:13px;font-weight:650;color:#284735'>{label}</span><span style='font-size:11px;color:#75857a;text-align:right'>{status}</span></div>",unsafe_allow_html=True)
+        st.markdown("</div>",unsafe_allow_html=True)
+    st.markdown("<div class='section-kicker' style='margin-top:26px'>EXPLORE THE PLATFORM</div>",unsafe_allow_html=True)
+    cards=[("📈","Demand Forecasting","Explore demand trends and review an illustrative forecast."),("📦","Inventory Intelligence","Review demand signals for stock planning."),("🧾","Supplier & Procurement","Compare clearly labelled supplier scenarios."),("♻️","Food-Waste Intelligence","Separate measured waste from demand and return signals."),("👥","Customer Intelligence","Explore customer patterns when history supports them."),("🗺️","Logistics & Delivery","Inspect distribution signals and routing data needs."),("🌍","ESG & Sustainability","Explore product and packaging attributes.")]
+    for i in range(0,len(cards),4):
+        cols=st.columns(4,gap="medium")
+        for col,item in zip(cols,cards[i:i+4]):
+            with col: st.markdown(f"<div class='feature-card'><div class='feature-icon'>{item[0]}</div><div class='feature-title'>{item[1]}</div><div class='feature-desc'>{item[2]}</div></div>",unsafe_allow_html=True)
+    st.caption("Prototype workspace · Outputs are exploratory and depend on data coverage, definitions and validation.")
 
 elif page == "1. Demand Forecasting":
     hero("📈 Demand Forecasting", "Explore demand patterns and evaluate a simple model")
