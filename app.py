@@ -1,3 +1,67 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error
+
+st.set_page_config(page_title="GreenPlate Intelligence", page_icon="🌱", layout="wide")
+st.markdown('''<style>.stApp{background:#f7faf7}.block-container{padding-top:1.4rem;max-width:1500px}h1,h2,h3{color:#163b2c}[data-testid="stSidebar"]{background:#eef7f0}.hero{background:linear-gradient(135deg,#173f2d,#2e7d52);padding:24px;border-radius:16px;color:white;margin-bottom:18px}.hero h1{color:white}.hero p{font-size:16px;margin:0}</style>''', unsafe_allow_html=True)
+
+SOURCES = {
+ "Restaurant demand (Germany)": ("data_preprocessed (1)(1).csv", ";", "Daily restaurant product-category demand and engineered features."),
+ "Grupo Bimbo sales (Mexico)": ("train_sample_30k.csv", ",", "30,000-row bakery sales/returns sample; not restaurant-specific."),
+ "Open Food Facts products": ("open_food_facts_sample(1).csv", ",", "Product-level ingredients, packaging and nutrition fields; not sales data."),
+}
+PAGES = ["Dashboard", "1. Demand Forecasting", "2. Inventory Intelligence", "3. Supplier & Procurement Intelligence", "4. Food-Waste Intelligence", "5. Customer Intelligence", "6. Logistics & Delivery Optimisation", "7. ESG & Sustainability Reporting", "Dataset Explorer"]
+
+def hero(title, subtitle):
+    st.markdown(f'<div class="hero"><h1>{title}</h1><p>{subtitle}</p></div>', unsafe_allow_html=True)
+
+def numeric(s):
+    return pd.to_numeric(s, errors="coerce")
+
+st.sidebar.markdown("## 🌱 GreenPlate Intelligence")
+st.sidebar.caption("Automating Smarter, Sustainable Food Operations")
+source = st.sidebar.selectbox("Choose a dataset", list(SOURCES))
+filename, default_sep, description = SOURCES[source]
+st.sidebar.caption(description)
+upload = st.sidebar.file_uploader("Optional: upload a replacement CSV", type=["csv"])
+sep_choice = st.sidebar.selectbox("CSV separator", [",", ";", "tab"], index=[",", ";", "tab"].index(default_sep if default_sep != "\t" else "tab"))
+sep = "\t" if sep_choice == "tab" else sep_choice
+page = st.sidebar.radio("Navigate", PAGES)
+st.sidebar.caption("Datasets remain separate. Select the dataset that matches the module you want to demonstrate.")
+
+try:
+    df = pd.read_csv(upload if upload is not None else filename, sep=sep if upload is not None else default_sep, low_memory=False)
+    df.columns = df.columns.astype(str).str.strip()
+    if source == "Restaurant demand (Germany)":
+        if "DEMAND_DATE" not in df: raise ValueError("Expected a DEMAND_DATE column.")
+        df["DEMAND_DATE"] = pd.to_datetime(df["DEMAND_DATE"], errors="coerce", dayfirst=True)
+        df = df.dropna(subset=["DEMAND_DATE"]).sort_values("DEMAND_DATE")
+        targets = [c for c in ["TOTAL", "TOTAL_FISCHPROD", "TOTAL_FLEISCH", "CALAMARI", "FISCH", "GARNELEN", "HAEHNCHEN", "KOEFTE", "LAMM", "STEAK"] if c in df]
+    elif source == "Grupo Bimbo sales (Mexico)":
+        required = {"Semana", "Producto_ID", "Cliente_ID", "Agencia_ID", "Demanda_uni_equil"}
+        if not required.issubset(df.columns): raise ValueError("This does not look like the expected Grupo Bimbo sample.")
+        for c in required: df[c] = numeric(df[c])
+        df = df.dropna(subset=["Semana", "Demanda_uni_equil"])
+        targets = ["Demanda_uni_equil"]
+    else:
+        for c in ["fat_100g", "sugars_100g", "proteins_100g"]:
+            if c in df: df[c] = numeric(df[c])
+        targets = []
+except FileNotFoundError:
+    st.error(f"Cannot find {filename}. Upload the CSV in the sidebar or add it to the same GitHub repository folder as app.py.")
+    st.stop()
+except Exception as e:
+    st.error(f"Could not load dataset: {e}")
+    st.info("Check that the selected dataset matches the chosen source and CSV separator.")
+    st.stop()
+
+def choose_target(key="target"):
+    if not targets:
+        st.warning("No recognised demand target is available in this dataset.")
+        return None
+    default = "TOTAL" if "TOTAL" in targets else targets[0]
     return st.selectbox("Demand measure", targets, index=targets.index(default), key=key)
 
 if page == "Dashboard":
